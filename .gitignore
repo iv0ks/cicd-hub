@@ -1,0 +1,38 @@
+# Compiled binaries.
+bin/
+vzx
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Build artifacts.
+dist/
+
+# Test coverage and profiles
+*.out
+*.prof
+*.test
+
+# JetBrains (GoLand)
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Vim
+*~
+*.swp
+*.swo
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Never commit environment files or private keys
+.env
+*.pem
+*.key

@@ -1,0 +1,81 @@
+# This is a reusable workflow that scans the repository's filesystem for known
+# vulnerabilities (CVEs in dependencies) and misconfigurations (IaC).
+name: "Vulnerability Scan"
+
+# Define the event that triggers the workflow.
+# This workflow is triggered by a workflow call event, so consumer projects can run it on their pull requests and scheduled jobs.
+on:
+  workflow_call:
+    inputs:
+      severity:
+        description: "Severities that make the job fail."
+        type: string
+        default: "CRITICAL,HIGH"
+      scanners:
+        description: "Comma-separated Trivy scanners to run."
+        type: string
+        default: "vuln,misconfig"
+      scan-ref:
+        description: "Path (filesystem reference) to scan."
+        type: string
+        default: "."
+      ignore-unfixed:
+        description: "Only report vulnerabilities that already have a fix available."
+        type: boolean
+        default: true
+
+# Least-privilege: the job only needs to read the repository contents.
+permissions:
+  contents: read
+
+# Define the jobs that run in the workflow.
+jobs:
+  vuln-scan:
+    name: "Trivy Scan"
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Step-1: Checkout the code.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Step-2: Full report with all severities (never fails, just reports).
+      # Produces a machine-readable JSON artifact with every finding, regardless of the gate severity, for visibility.
+      - name: Trivy scan (full report)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: "v0.70.0"
+          scan-type: fs
+          scan-ref: ${{ inputs.scan-ref }}
+          scanners: ${{ inputs.scanners }}
+          format: json
+          output: trivy-vuln.json
+          exit-code: "0"
+
+      # Step-3: Gate - findings of the given severities fail the job.
+      # ignore-unfixed avoids blocking on CVEs that have no patch available yet.
+      - name: Trivy scan (gate)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: "v0.70.0"
+          scan-type: fs
+          scan-ref: ${{ inputs.scan-ref }}
+          scanners: ${{ inputs.scanners }}
+          format: table
+          output: trivy-vuln.txt
+          severity: ${{ inputs.severity }}
+          ignore-unfixed: ${{ inputs.ignore-unfixed }}
+          exit-code: "1"
+          skip-setup-trivy: "true"
+
+      # Step-4: Keep the full reports as a downloadable artifact.
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trivy-vuln-report
+          path: |
+            trivy-vuln.json
+            trivy-vuln.txt
+          retention-days: 30
+          if-no-files-found: ignore

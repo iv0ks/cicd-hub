@@ -9,7 +9,7 @@ on:
 # Define the jobs that run in the workflow.
 jobs:
   build:
-    name: Build & Push
+    name: Push GHCR
     runs-on: ubuntu-24.04
     
     # Define the steps that run in the job.

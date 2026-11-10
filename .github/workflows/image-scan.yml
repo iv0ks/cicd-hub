@@ -14,11 +14,8 @@ on:
 # Define the jobs that run in the workflow.
 jobs:
   image-scan:
-    name: "Trivy"
+    name: "Trivy Scan"
     runs-on: ubuntu-24.04
-    permissions:
-      id-token: write         # Required for AWS OIDC role assumption.
-      contents: read          # Required to checkout and read repo files.
 
     steps:      
       # Step-1: Checkout the code.

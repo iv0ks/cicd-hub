@@ -1,0 +1,53 @@
+# This is a reusable workflow that runs the Python test suite with pytest.
+name: "Python Test"
+
+# Define the event that triggers the workflow.
+# This workflow is triggered by a workflow call event, so consumer projects can run it on their pull requests.
+on:
+  workflow_call:
+    inputs:
+      python-version-file:
+        description: "File that declares the Python version (.python-version or pyproject.toml)."
+        type: string
+        default: ".python-version"
+      requirements:
+        description: "Path to the requirements file with the app dependencies."
+        type: string
+        default: "requirements.txt"
+
+# Least-privilege: the job only needs to read the repository contents.
+permissions:
+  contents: read
+
+# Define the jobs that run in the workflow.
+jobs:
+  python-test:
+    name: "Python Test"
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Step-1: Checkout the code.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Step-2: Set up Python with pip caching keyed on the requirements file.
+      # The Python version comes from the consumer repo's version file, so CI
+      # matches local/Docker instead of hardcoding it here.
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version-file: ${{ inputs.python-version-file }}
+          cache: pip
+          cache-dependency-path: ${{ inputs.requirements }}
+
+      # Step-3: Install app dependencies plus pytest.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ${{ inputs.requirements }}
+          pip install pytest
+
+      # Step-4: Run the test suite. pytest reads testpaths/pythonpath from
+      # the consumer project's pyproject.toml.
+      - name: Pytest
+        run: pytest

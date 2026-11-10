@@ -23,12 +23,16 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Step-2: Download the generated artifact.
+      # download-artifact@v4+ extracts a single artifact directly into `path`
+      # (not into a subfolder named after the artifact), so we set `path`
+      # explicitly to keep the file under <name>-image/with-digest.txt.
       - name: Download Artifact
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           # Must match the artifact name produced by build-push.yml. Artifact
           # names cannot contain a forward slash, so use the repo name only.
           name: ${{ github.event.repository.name }}-image
+          path: ${{ github.event.repository.name }}-image
 
       # Step-3: Read the image digest from the file and export it as an output variable.
       - name: Get Image Digest

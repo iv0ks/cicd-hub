@@ -1,0 +1,46 @@
+# This is a reusable workflow that runs the PHP test suite with phpunit.
+name: "PHP Test"
+
+# Define the event that triggers the workflow.
+# This workflow is triggered by a workflow call event, so consumer projects can run it on their pull requests.
+on:
+  workflow_call:
+    inputs:
+      php-version:
+        description: "PHP version to set up."
+        type: string
+        default: "8.3"
+
+# Least-privilege: the job only needs to read the repository contents.
+permissions:
+  contents: read
+
+# Define the jobs that run in the workflow.
+jobs:
+  php-test:
+    name: "PHP Test"
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Step-1: Checkout the code.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Step-2: Set up PHP. phpunit needs dom/mbstring/xml/xmlwriter/tokenizer;
+      # composer is installed by the action.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: ${{ inputs.php-version }}
+          extensions: mbstring, dom, xml, xmlwriter, tokenizer
+          tools: composer:v2
+          coverage: none
+
+      # Step-3: Install dependencies (app + dev, incl. phpunit) from composer.json.
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress
+
+      # Step-4: Run the test suite. phpunit reads its config from the consumer
+      # project's phpunit.xml.
+      - name: phpunit
+        run: vendor/bin/phpunit

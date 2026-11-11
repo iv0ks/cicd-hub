@@ -1,0 +1,51 @@
+# This is a reusable workflow that runs PHP linting and static analysis (php-cs-fixer + phpstan). Meant to run on every pull request.
+name: "PHP Lint"
+
+# Define the event that triggers the workflow.
+# This workflow is triggered by a workflow call event, so consumer projects can run it on their pull requests.
+on:
+  workflow_call:
+    inputs:
+      php-version:
+        description: "PHP version to set up."
+        type: string
+        default: "8.3"
+
+# Least-privilege: the job only needs to read the repository contents.
+permissions:
+  contents: read
+
+# Define the jobs that run in the workflow.
+jobs:
+  php-lint:
+    name: "PHP Lint"
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Step-1: Checkout the code.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Step-2: Set up PHP. Extensions mbstring/dom/xml are needed by the dev
+      # tooling (php-cs-fixer, phpstan); composer is installed by the action.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: ${{ inputs.php-version }}
+          extensions: mbstring, dom, xml, tokenizer
+          tools: composer:v2
+          coverage: none
+
+      # Step-3: Install dev dependencies (php-cs-fixer, phpstan) from the
+      # consumer project's composer.json. Cached by composer's own layer.
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress
+
+      # Step-4: Run php-cs-fixer in dry-run mode (fails if it would change files).
+      # Config is read from the consumer project's .php-cs-fixer.php.
+      - name: php-cs-fixer
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff
+
+      # Step-5: Run phpstan. Config (level, paths) comes from phpstan.neon.
+      - name: phpstan
+        run: vendor/bin/phpstan analyse --no-progress

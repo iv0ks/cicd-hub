@@ -1,0 +1,48 @@
+# This is a reusable workflow that runs Node/TypeScript linting and formatting
+# checks (ESLint + Prettier). Meant to run on every pull request.
+name: "Node Lint"
+
+# Define the event that triggers the workflow.
+# This workflow is triggered by a workflow call event, so consumer projects can run it on their pull requests.
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to set up."
+        type: string
+        default: "24"
+
+# Least-privilege: the job only needs to read the repository contents.
+permissions:
+  contents: read
+
+# Define the jobs that run in the workflow.
+jobs:
+  node-lint:
+    name: "Node Lint"
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Step-1: Checkout the code.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Step-2: Enable Corepack so the pinned pnpm from package.json is used.
+      - name: Enable Corepack
+        run: corepack enable
+
+      # Step-3: Set up Node with pnpm dependency caching.
+      - name: Set up Node
+        uses: actions/setup-node@1d0ff469b7ec7b3cb9d8673fde0c81c44821de2a # v4.2.0
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: pnpm
+
+      # Step-4: Install dependencies (frozen to the lockfile).
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Step-5: Run the lint script (eslint + prettier --check). Its config is
+      # read from the consumer project (eslint.config.js, .prettierrc.json).
+      - name: Lint
+        run: pnpm lint
